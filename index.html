@@ -185,7 +185,7 @@
             <div class="upi-icon"><i class="fas fa-wallet"></i></div>
             <div class="upi-text">
                 <h3>Merchant UPI VPA Configuration</h3>
-                <p>यहाँ अपनी सक्रिय UPI ID अपडेट करें। QR कोड इसी ID पर बदलेga।</p>
+                <p>यहाँ अपनी सक्रिय UPI ID अपडेट करें। QR कोड इसी ID पर बदलेगा।</p>
             </div>
         </div>
         <div class="upi-right">
@@ -296,7 +296,7 @@
                     <div class="form-group"><label>Dealing Amount (₹)</label><input type="number" id="dealingAmount" step="0.01" oninput="calcNewAmt()"></div>
                     <div class="form-group"><label>Amount Deno (₹)</label><input type="number" id="amountDeno" step="0.01"></div>
                     <div class="form-group"><label>Received Amount (₹)</label><input type="number" id="receivedAmount" step="0.01" oninput="calcNewAmt()"></div>
-                    <div class="form-group"><label>ID Activation Amount (₹)</label><input type="number" id="idActivationAmount" step="0.01"></div>
+                    <div class="form-group"><label>ID Activation Amount (₹)</label><input type="number" id="idActivationAmount" step="0.01" oninput="calcNewAmt()"></div>
                     <div class="form-group"><label>Due Amount / Setup Balance (₹)</label><input type="number" id="uploadingAmount" step="0.01" readonly></div>
                     <div class="form-group"><label>UTR / TRN NO.</label><input type="text" id="utrNo"></div>
                     <div class="form-group">
@@ -317,7 +317,9 @@
         </div>
     </div>
 
-</div><div class="modal-overlay" id="fullEditModal">
+</div>
+
+<div class="modal-overlay" id="fullEditModal">
     <div class="modal-content large-modal">
         <div class="modal-header">
             <span><i class="fas fa-edit"></i> Edit Record</span>
@@ -383,7 +385,7 @@
                 <div class="form-group"><label>Dealing Amount (₹)</label><input type="number" id="edit_dealingAmount" step="0.01" oninput="calcEditAmt()"></div>
                 <div class="form-group"><label>Amount Deno (₹)</label><input type="number" id="edit_amountDeno" step="0.01"></div>
                 <div class="form-group"><label>Received Amount (₹)</label><input type="number" id="edit_receivedAmount" step="0.01" oninput="calcEditAmt()"></div>
-                <div class="form-group"><label>ID Activation Amount (₹)</label><input type="number" id="edit_idActivationAmount" step="0.01"></div>
+                <div class="form-group"><label>ID Activation Amount (₹)</label><input type="number" id="edit_idActivationAmount" step="0.01" oninput="calcEditAmt()"></div>
                 <div class="form-group"><label>Due Amount / Setup Balance (₹)</label><input type="number" id="edit_uploadingAmount" step="0.01" readonly></div>
                 <div class="form-group"><label>UTR / TRN NO.</label><input type="text" id="edit_utrNo"></div>
                 <div class="form-group">
@@ -441,7 +443,9 @@
                 <label><i class="fas fa-comment-dots"></i> Remarks / Purpose (Optional)</label>
                 <textarea id="whatsappRemarks" rows="2" placeholder="Add any special note, purpose, or instruction for customer..."></textarea>
             </div>
-            <button class="btn-copy-link" id="copyLinkBtn"><i class="fas fa-link"></i> Copy Payment Link</button>
+            <div class="toolbar" style="margin-bottom: 0px; margin-top: 5px;">
+                <button class="btn-copy-link" id="copyLinkBtn" style="flex: 1; margin-top: 0px;"><i class="fas fa-link"></i> Copy Payment Link</button>
+            </div>
         </div>
         <button class="btn-share-wa" id="whatsappShareBtn"><i class="fab fa-whatsapp"></i> Share QR + Link on WhatsApp</button>
         <p style="font-size: 11px; margin-top: 14px; color: #777;">
@@ -556,7 +560,6 @@
 
     let currentData = [], currentHeaders = [], isMobileView = false;
     let currentQRPayload = null;
-    let currentQRCanvas = null;
     let selectedRowForPrint = null;
 
     // ─── INIT ─────────────────────────────────────────────────────
@@ -652,7 +655,7 @@
         const bizName = localStorage.getItem('biz_name') || "KRP ID Activation";
 
         const messageText = 
-            `🔔*PENDING PAYMENT REMINDER*\n\n` +
+            `🔔 *PENDING PAYMENT REMINDER* 🔔\n\n` +
             `Dear *${clientName}*,\n` +
             `Aapke *${purpose}* ka payment abhi baki hai. Kripya niche diye gaye details ko check karein:\n\n` +
             `🏢 *Web Automation:* ${bizName.toUpperCase()}\n` +
@@ -742,33 +745,35 @@
         document.getElementById('invoiceNo').value = `${prefix}${maxCounter + 1}`;
     }
 
-    // NEW LOGIC: Calculation + Auto Status Validation Lock/Unlock for New Form
+    // FIX: Setup Amount is strictly 0.00 if PENDING (Received amount is 0), otherwise tracks formula -> [Received Amount - ID Activation Amount]
     function calcNewAmt() {
-        const d = parseFloat(document.getElementById('dealingAmount').value) || 0;
         const r = parseFloat(document.getElementById('receivedAmount').value) || 0;
-        document.getElementById('uploadingAmount').value = (d - r).toFixed(2);
-
+        const i = parseFloat(document.getElementById('idActivationAmount').value) || 0;
+        
         const statusSelect = document.getElementById('paymentStatus');
         if (r > 0) {
             statusSelect.disabled = false;
+            document.getElementById('uploadingAmount').value = (r - i).toFixed(2);
         } else {
             statusSelect.value = "PENDING";
             statusSelect.disabled = true;
+            document.getElementById('uploadingAmount').value = "0.00";
         }
     }
     
-    // NEW LOGIC: Calculation + Auto Status Validation Lock/Unlock for Edit Form
+    // FIX: Setup Amount tracks verification on Edit modal
     function calcEditAmt() {
-        const d = parseFloat(document.getElementById('edit_dealingAmount').value) || 0;
         const r = parseFloat(document.getElementById('edit_receivedAmount').value) || 0;
-        document.getElementById('edit_uploadingAmount').value = (d - r).toFixed(2);
+        const i = parseFloat(document.getElementById('edit_idActivationAmount').value) || 0;
 
         const statusSelect = document.getElementById('edit_paymentStatus');
         if (r > 0) {
             statusSelect.disabled = false;
+            document.getElementById('edit_uploadingAmount').value = (r - i).toFixed(2);
         } else {
             statusSelect.value = "PENDING";
             statusSelect.disabled = true;
+            document.getElementById('edit_uploadingAmount').value = "0.00";
         }
     }
 
@@ -890,7 +895,7 @@
         document.getElementById('tableBody').innerHTML = html;
     }
 
-    // ─── UPDATED STATS ────────────────────────────────────────────
+    // ─── DEALS PENDING VALUATION AND TOTAL OUTSTANDING BALANCE ───
     function updateStats(data) {
         const idxStatus  = getColIndex('PAYMENT STATUS');
         const idxRecv    = getColIndex('RECEIVED AMOUNT');
@@ -899,8 +904,8 @@
         const idxLogin   = getColIndex('LOGIN ID');
         const idxIdAct   = getColIndex('ID ACTIVATION AMOUNT');
 
-        let pCount=0,pAmt=0,sCount=0,sAmt=0,advCount=0,advAmt=0,refCount=0,refAmt=0, partialCount=0;
-        let totCount=data.length,totAmt=0,setupCount=0,setupAmt=0,idCount=0,idActAmt=0;
+        let pCount=0, pAmt=0, sCount=0, sAmt=0, advCount=0, advAmt=0, refCount=0, refAmt=0, partialCount=0;
+        let totCount=data.length, totAmt=0, setupCount=0, setupAmt=0, idCount=0, idActAmt=0;
         
         let totalDueAmt=0, dueIdsCount=0;
 
@@ -916,8 +921,11 @@
                 if (loginId !== '') idCount++;
                 idActAmt += idAmt;
                 
-                if (supAmt !== 0) setupCount++;
-                setupAmt += supAmt;
+                // FIX: Pending items ka amount Setup card total me count nahi hona chahiye
+                if (status !== 'PENDING' && supAmt !== 0) {
+                    setupCount++;
+                    setupAmt += supAmt;
+                }
 
                 if (status === 'PENDING' || status === 'PARTIAL') {
                     let due = dAmt - rAmt;
@@ -928,7 +936,7 @@
                 }
             }
 
-            if      (status === 'PENDING') { pCount++;   pAmt   += dAmt; totAmt += dAmt; }
+            if      (status === 'PENDING') { pCount++;   pAmt += dAmt; totAmt += dAmt; }
             else if (status === 'PARTIAL') { partialCount++; sAmt += rAmt; totAmt += rAmt; }
             else if (status === 'SUCCESS') { sCount++;   sAmt   += rAmt; totAmt += rAmt; }
             else if (status === 'ADVANCE') { advCount++; advAmt += rAmt; totAmt += rAmt; }
@@ -937,7 +945,7 @@
         });
 
         document.getElementById('statsArea').innerHTML = `
-            <div class="stat-card"><div class="stat-info"><h4>Pending / Partial</h4><div class="stat-count">${pCount + partialCount}</div><div class="stat-amount">₹${pAmt.toLocaleString('en-IN')}</div></div></div>
+            <div class="stat-card"><div class="stat-info"><h4>Pending / Partial Volume</h4><div class="stat-count">${pCount + partialCount}</div><div class="stat-amount">₹${pAmt.toLocaleString('en-IN')}</div></div></div>
             <div class="stat-card"><div class="stat-info"><h4>Success</h4><div class="stat-count">${sCount}</div><div class="stat-amount">₹${sAmt.toLocaleString('en-IN')}</div></div></div>
             <div class="stat-card"><div class="stat-info"><h4>Total Due (उधारी)</h4><div class="stat-count" style="color:#ee5d50;">${dueIdsCount} IDs Pending</div><div class="stat-amount" style="color:#ee5d50; font-size:14px; font-weight:700;">₹${totalDueAmt.toLocaleString('en-IN')}</div></div></div>
             <div class="stat-card"><div class="stat-info"><h4>Refund</h4><div class="stat-count">${refCount}</div><div class="stat-amount">₹${refAmt.toLocaleString('en-IN')}</div></div></div>
@@ -971,7 +979,6 @@
         formData.append('idActivationAmount',document.getElementById('idActivationAmount').value);
         formData.append('uploadingAmount',   document.getElementById('uploadingAmount').value);
         formData.append('utrNo',             document.getElementById('utrNo').value);
-        // Important: Read value even if disabled during submission
         formData.append('paymentStatus',     document.getElementById('paymentStatus').value);
         formData.append('remarks',           document.getElementById('remarks').value);
 
@@ -982,7 +989,7 @@
                 showMessage(result.message, 'success');
                 document.getElementById('entryForm').reset();
                 document.getElementById('date').value = getLocalISODate(new Date());
-                document.getElementById('paymentStatus').disabled = true; // reset lock
+                document.getElementById('paymentStatus').disabled = true; 
                 resetNewFormMultiSelect();
                 switchTab('tracker');
                 loadTrackerData(true);
@@ -1000,8 +1007,10 @@
         document.getElementById('edit_contactName').value       = record[getColIndex('CONTACT NO. OR NAME')] || '';
         document.getElementById('edit_bankOwner').value         = record[getColIndex('BANK OWNER NAME')] || '';
         document.getElementById('edit_state').value             = record[getColIndex('STATE')] || '';
+        
         setMultiSelectState('edit_purpose',        record[getColIndex('PURPOSE')] || '');
         setMultiSelectState('edit_serviceRemarks', record[getColIndex('SERVICE CHARGE REMARKS')] || '');
+        
         document.getElementById('edit_loginId').value           = record[getColIndex('LOGIN ID')] || '';
         document.getElementById('edit_dealingAmount').value     = record[getColIndex('DEALING AMOUNT')] || '';
         document.getElementById('edit_amountDeno').value        = record[getColIndex('AMOUNT DENO')] || '';
@@ -1014,7 +1023,6 @@
         document.getElementById('edit_utrNo').value             = record[getColIndex('UTR / TRN NO.')] || '';
         document.getElementById('edit_remarks').value           = record[getColIndex('REMARKS')] || '';
         
-        // Evaluate lock/unlock on open for Edit Modal
         const statusSelect = document.getElementById('edit_paymentStatus');
         statusSelect.value = record[getColIndex('PAYMENT STATUS')] || 'PENDING';
         if (parseFloat(recvVal) > 0) {
@@ -1156,7 +1164,7 @@
 
         const userRemarks  = document.getElementById('whatsappRemarks').value.trim();
         const remarksText  = userRemarks ? `\n📝 Remarks: ${userRemarks}` : '';
-        const messageText  =
+        const messageText =
             `💸 *PAYMENT REQUEST* 💸\n\n` +
             `🏢 *KRP ID ACTIVATION*\n` +
             `👤 Customer: ${p.contactName}\n` +
@@ -1239,7 +1247,7 @@
         }
     }
 
-    // ─── CLOSE QR MODAL ───────────────────────────────────────────
+    // FIX: Modal close logic explicitly restored
     function closeQRModal() {
         document.getElementById('qrShareModal').classList.remove('active');
         currentQRPayload = null;
@@ -1257,7 +1265,7 @@
         } catch (e) { showMessage('Network error', 'error'); }
     }
 
-    // ─── EXPORT ───────────────────────────────────────────────────
+    // ─── EXPORT TO EXCEL ──────────────────────────────────────────
     function exportToExcel() {
         if (!currentData.length) return alert('No data to export');
         let csv = currentHeaders.map(h => `"${h}"`).join(',') + '\n';
